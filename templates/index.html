@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Web Page Analyzer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background-color: #f4f4f4;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 10px 14px;
+      margin-right: 8px;
+      border: none;
+      background-color: #3498db;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    #answerBox {
+      margin-top: 20px;
+      padding: 10px;
+      background: #eaeaea;
+      border-radius: 6px;
+    }
+
+    #message {
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Web Page Analyzer</h1>
+
+    <!-- URL input -->
+    <input type="text" id="url" placeholder="Enter URL to analyze...">
+    <button onclick="analyzePage()">Analyze</button>
+
+    <div id="message"></div>
+
+    <!-- Preview content -->
+    <textarea id="preview" rows="6" readonly placeholder="Preview of extracted content..."></textarea>
+
+    <!-- Ask a question -->
+    <input type="text" id="question" placeholder="Ask a question...">
+    <button onclick="askQuestion()">Ask</button>
+    <button onclick="startListening()" title="Voice Input">🎤</button>
+
+    <!-- Answer output -->
+    <div id="answerBox">
+      <p id="answer">Your answer will appear here.</p>
+      <button onclick="speakAnswer()" title="Read Answer">🔊</button>
+    </div>
+  </div>
+
+  <script>
+    async function analyzePage() {
+      const url = document.getElementById('url').value;
+      const messageBox = document.getElementById('message');
+      const previewBox = document.getElementById('preview');
+      messageBox.textContent = 'Analyzing...';
+
+      try {
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+        messageBox.textContent = data.message || '';
+        previewBox.value = data.content || '';
+      } catch (error) {
+        messageBox.textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function askQuestion() {
+      const question = document.getElementById('question').value;
+      const answerBox = document.getElementById('answer');
+      if (!question) return;
+
+      answerBox.textContent = "Thinking...";
+
+      try {
+        const response = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+
+        const data = await response.json();
+        answerBox.textContent = data.answer || data.error || "No answer.";
+      } catch (error) {
+        answerBox.textContent = "Error: " + error.message;
+      }
+    }
+
+    function startListening() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('question').value = transcript;
+        askQuestion();  // auto trigger ask
+      };
+
+      recognition.onerror = function(event) {
+        alert("Speech recognition error: " + event.error);
+      };
+
+      recognition.start();
+    }
+
+    function speakAnswer() {
+      const answer = document.getElementById('answer').textContent;
+      if (answer) {
+        const utterance = new SpeechSynthesisUtterance(answer);
+        utterance.lang = 'en-US';
+        speechSynthesis.speak(utterance);
+      }
+    }
+  </script>
+</body>
+</html>
